@@ -59,3 +59,27 @@ def get_worst_DMerc_normalized(vmec, s_min, s_max):
     DMerc_normalized = get_DMerc_normalized(vmec)
     mask = (s >= s_min) & (s <= s_max)
     return np.min(DMerc_normalized[mask])
+
+def get_mean_DMerc_normalized(vmec, s_min, s_max):
+    """
+    Get the mean value of DMerc_normalized in the range s_min <= s <= s_max.
+
+    Parameters
+    ----------
+    vmec : Vmec
+        A simsopt or vmec++ Vmec object that has already been run.
+    s_min : float
+        Minimum value of s to consider.
+    s_max : float
+        Maximum value of s to consider.
+
+    Returns
+    -------
+    worst_DMerc : float
+        The mean value of DMerc_normalized in the specified range.
+    """
+    s = vmec.s_full_grid
+    DMerc_normalized = get_DMerc_normalized(vmec)
+    mask = (s >= s_min) & (s <= s_max)
+    return np.mean(DMerc_normalized[mask])
+

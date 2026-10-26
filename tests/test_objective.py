@@ -1,6 +1,10 @@
 import os
 import numpy as np
-from vmecpp.simsopt_compat import Vmec
+
+try:
+    from vmecpp.simsopt_compat import Vmec
+except ModuleNotFoundError:
+    from simsopt.mhd import Vmec
 from simsopt.mhd.vmec_diagnostics import (
     QuasisymmetryRatioResidual,
     vmec_compute_geometry,

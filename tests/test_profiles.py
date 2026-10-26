@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.constants import elementary_charge
 import scipy.stats as stats
 from scipy.interpolate import interp1d
-import vmecpp
+import vmecpp # TODO: make compatible with normal VMEC?
 from alpha_opt import DATA_DIR
 from alpha_opt.profiles import n_m3_func, T_keV_func, DT_reaction_rate, relative_DT_reaction_rate_for_our_profiles, sample_alpha_birth_s
 

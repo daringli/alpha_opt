@@ -8,6 +8,8 @@ from .loss_times import (
     time_at_which_energy_loss_exceeds,
     alpha_loss_objective_from_times
 )
-from .mercier import get_DMerc_normalized, get_worst_DMerc_normalized
+from .mercier import get_DMerc_normalized, get_worst_DMerc_normalized, get_mean_DMerc_normalized
+from .iota import get_iota, get_min_iota, get_max_iota
+
 from .pca import SurfacePCAGarabedian, SurfacePCARealSpace, SurfaceWeightedPCA
 from .surface import init_optimizable_surface, SurfaceGarabedianQuantiles, SurfaceGarabedian01

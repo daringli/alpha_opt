@@ -112,6 +112,8 @@ class SurfaceGarabedianQuantiles(Surface):
         filename=Garabedian_data_file,
         exact_radii=False,
         seed=0,
+        Delta00_0 = None,
+        Delta10_0 = None,    
     ):
         self._major_radius = major_radius
         self._minor_radius = minor_radius
@@ -124,6 +126,18 @@ class SurfaceGarabedianQuantiles(Surface):
         self.mmin = -mpol + 1
         self.nmax = ntor
         self.nmin = -ntor
+
+        if Delta00_0 is None:
+            self.Delta00_0 = self._minor_radius
+        else:
+            self.Delta00_0 = Delta00_0
+
+        if Delta10_0 is None:
+            self.Delta10_0 = self._major_radius
+        else:
+            self.Delta10_0 = Delta10_0
+
+            
 
         self.surface_garabedian = SurfaceGarabedian(
             nfp=self.nfp,
@@ -232,10 +246,13 @@ class SurfaceGarabedianQuantiles(Surface):
             self.transformer.inverse_transform(transformed_vals)[0, :]
             * self._minor_radius
         )
+        #print(variable_original.reshape(1, -1))
+        #new_transformed_vals = self.transformer.transform(variable_original.reshape(1, -1)/self._minor_radius)
+        #assert(np.allclose(transformed_vals, new_transformed_vals))
 
         full_values = np.zeros(self.ms_selected.size)
-        full_values[self.idx_00] = self._minor_radius
-        full_values[self.idx_10] = self._major_radius
+        full_values[self.idx_00] = self.Delta00_0
+        full_values[self.idx_10] = self.Delta10_0
         full_values[self.variable_mask] = variable_original
 
         mode_map = {
@@ -260,7 +277,7 @@ class SurfaceGarabedianQuantiles(Surface):
                 )
 
             try:
-                root = optimize.newton(aspect_residual, x0=self._major_radius)
+                root = optimize.newton(aspect_residual, x0=self.Delta10_0)
             except RuntimeError as exc:
                 raise RuntimeError(
                     "Failed to enforce exact radii with 1D root solve for Delta(1,0)."
@@ -276,6 +293,45 @@ class SurfaceGarabedianQuantiles(Surface):
 
     def to_RZFourier(self):
         return self.surface_rz_fourier
+
+    def from_RZFourier(self, surf):
+        self.surface_garabedian = SurfaceGarabedian.from_RZFourier(surf)
+        self.Delta00_0 = self.surface_garabedian.get_Delta(0, 0)
+        self.Delta10_0 = self.surface_garabedian.get_Delta(1, 0)
+        # print(self.surface_garabedian.to_RZFourier().minor_radius())
+        # print(self._minor_radius)
+        # print(surf.minor_radius())
+        # print(self.surface_garabedian.to_RZFourier().aspect_ratio())
+        # print(self._major_radius/self._minor_radius)
+        # print(surf.aspect_ratio())
+
+        #og_gar_x = self.surface_garabedian.x
+        #og_00 = self.surface_garabedian.get_Delta(0, 0)
+        #print(self.surface_garabedian.to_RZFourier().minor_radius())
+        
+        #print(og_00)
+        #self.recompute_bell()
+        #self.surface_rz_fourier = self.surface_garabedian.to_RZFourier()
+        variable_original = []
+        for m,n in zip(self.ms_variable, self.ns_variable):
+            variable_original.append(self.surface_garabedian.get_Delta(m, n))
+        variable_original = np.array(variable_original).reshape(1, -1)
+        new_x = self.transformer.transform(variable_original/self._minor_radius)
+        self.x = new_x[0]
+        #print("!!!!!!!!")
+        #print(variable_original)
+        
+        #self.recompute_bell()
+        # may seem redundent since this could have been set initially
+        # but non-uniqueness of Garabedian/Fourier representation means we have to do this
+        #print(self.surface_garabedian.get_Delta(0, 0))
+        #print(self.surface_garabedian.get_Delta(1, 0))
+        #self.surface_garabedian.set_Delta(0, 0, self._minor_radius)
+        #self.surface_garabedian.set_Delta(1, 0, self._major_radius)
+        #self.surface_rz_fourier = self.surface_garabedian.to_RZFourier()
+        #final_gar_x = self.surface_garabedian.x
+        #print(np.isclose(og_gar_x,final_gar_x))
+        return self
 
 class SurfaceGarabedian01(Surface):
     """Similar to SurfaceGarabedian, but the dofs are scaled to lie in [0, 1]
@@ -398,3 +454,23 @@ class SurfaceGarabedian01(Surface):
 
     def to_RZFourier(self):
         return self.surface_rz_fourier
+
+
+
+def fit_surface(surf, target_surf):
+    """Changes dofs of surface 'surf' to make it be close to 'target_surf'.
+    NOTE: comparison is done naively assuming points [i,j] on surf corresponds to the same point on the target. So a surface parameterized by different angles will not match by this definition.
+    It seems to work fine in practice but is not the most general."""
+
+    points_target = target_surf.gamma().flatten()
+    def f(x):
+        surf.x = x
+        points = surf.surface_rz_fourier.gamma().flatten()
+        return points - points_target
+    
+    x0  = surf.x
+    res = optimize.least_squares(f, x0)
+    new_x = res.x
+    print(res)
+    surf.x = new_x
+    return surf

@@ -20,6 +20,8 @@ def get_objective(
     save_convergence_history=True,
     max_B=12.0,
     max_B_iterations=0,
+    toroidal_current_iterations=0,
+    toroidal_current_model=None,
     phiedge=None,
 ):
     """
@@ -33,6 +35,12 @@ def get_objective(
     first vmec calculation. Setting phiedge is useful when doing finite
     differences to ensure that the objective is independent of the history of
     past evaluations.
+
+    If toroidal_current_iterations > 0, toroidal_current_model must not be 'None' and will be used to
+    calculate the toroidal current from the Vmec object. The VMEC calculation will be redone with this new current,
+    and the current calculation + Vmec rerun will be repeated `toroidal_current_iterations` times.
+    An example of a toroidal_current_model would be the Redl formula.
+    TODO: unclear how this affects Bmax.
     """
     def objective(x):
         start_time = time.time()
@@ -53,6 +61,10 @@ def get_objective(
         if phiedge is not None:
             vmec.set('phiedge', phiedge)
 
+        vmec.need_to_run_code = True
+        # to zero the current
+        #vmec.indata.pcurr_type= 'power_series'
+                
         # This next line will be unnecessary once my PR to vmecpp is merged.
         # Handle the changed API for change_resolution
         new_surf = surface2.change_resolution(vmec.indata.mpol, vmec.indata.ntor)
@@ -77,7 +89,7 @@ def get_objective(
             #     # Run the VMEC simulation
             #     vmec.run()
             vmec.run()
-            for _ in range(max_B_iterations):
+            for i in range(max_B_iterations):
                 actual_max_B = compute_max_B(vmec)
                 old_phiedge = vmec.get('phiedge')
                 factor = max_B / actual_max_B
@@ -86,10 +98,28 @@ def get_objective(
                 vmec.set('phiedge', new_phiedge)
                 vmec.run()
 
+            for i in range(toroidal_current_iterations):
+                ac_aux_f, ac_aux_s = toroidal_current_model.toroidal_current(vmec)
+                vmec.indata.pcurr_type = 'cubic_spline_ip'
+                vmec.indata.ac_aux_f = ac_aux_f
+                vmec.indata.ac_aux_s = ac_aux_s
+                vmec.indata.curtor = np.trapz(ac_aux_f, ac_aux_s)
+                vmec.set_indata()
+                vmec.need_to_run_code = True
+                vmec.run()
+                #indata_json = vmec.indata.model_dump_json(indent=2)
+                #with open("input.vmec_current" + str(i).zfill(2), "w") as f:
+                #    f.write(indata_json)
+
         except ObjectiveFailure:
             # Some large value:
             failure = True
-
+        
+        vmec.set_indata()
+        indata_json = vmec.indata.model_dump_json(indent=2)
+        with open("input.vmec_tmp", "w") as f:
+            f.write(indata_json)
+            
         print("Time to run vmec:", time.time() - vmec_start_time)
 
         if failure:

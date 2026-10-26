@@ -1,6 +1,10 @@
 import os
 import numpy as np
-from vmecpp.simsopt_compat import Vmec
+
+try:
+    from vmecpp.simsopt_compat import Vmec
+except ModuleNotFoundError:
+    from simsopt.mhd import Vmec
 from simsopt.geo import SurfaceGarabedian
 from alpha_opt import init_optimizable_surface, SurfaceGarabedianQuantiles, SurfaceGarabedian01, DATA_DIR
 

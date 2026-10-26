@@ -1,7 +1,10 @@
 import os
 import numpy as np
-# from vmecpp.simsopt_compat import Vmec
-from simsopt.mhd.vmec import Vmec
+try:
+    from vmecpp.simsopt_compat import Vmec
+except ModuleNotFoundError:
+    from simsopt.mhd import Vmec
+
 from alpha_opt import DATA_DIR, get_DMerc_normalized, get_worst_DMerc_normalized
 
 def test_DMerc_normalized_independent_of_B_and_size():

@@ -1,7 +1,12 @@
 import os
 import time
 import numpy as np
-from vmecpp.simsopt_compat import Vmec
+try:
+    from vmecpp.simsopt_compat import Vmec
+except ModuleNotFoundError:
+    from simsopt.mhd import Vmec
+
+
 from simsopt.util import in_github_actions
 
 from . import DATA_DIR
