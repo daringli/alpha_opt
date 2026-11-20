@@ -35,7 +35,7 @@ else:
 
     # from firm3d.util.sampling import sample_stz
 
-from .profiles import sample_alpha_birth_s
+from .profiles import sample_alpha_birth_s, n_m3_func, T_keV_func
 from .loss_times import alpha_loss_objective_from_times
 
 # logging.basicConfig()
@@ -68,10 +68,15 @@ def sample_tz(s, J_max, field):
 
 
 # Sample s,t,z
-def sample_stz(field, J_max):
-    s = sample_alpha_birth_s()
-    theta, zeta = sample_tz(s, J_max, field)
-    return np.array([s, theta, zeta])
+class ProfileSampler:
+    def __init__(self, ni, Ti):
+        self.ni = ni
+        self.Ti = Ti
+    
+    def sample_stz(self, field, J_max):
+        s = sample_alpha_birth_s(self.ni, self.Ti)
+        theta, zeta = sample_tz(s, J_max, field)
+        return np.array([s, theta, zeta])
 
 def sample_stz_s_0p25(field, J_max):
     s = 0.25
@@ -85,6 +90,8 @@ def generate_interpolant_and_initial_conditions(
     n_particles=5000,
     vacuum=False,
     profiles="realistic",
+    ni=n_m3_func,
+    Ti=T_keV_func,    
 ):
     """
     Generate initial conditions for alpha particles.
@@ -148,7 +155,7 @@ def generate_interpolant_and_initial_conditions(
     if profiles == "firm3d":
         sample_func = firm3d_sample_stz
     elif profiles == "realistic":
-        sample_func = sample_stz
+        sample_func =  ProfileSampler(ni,Ti).sample_stz
     elif profiles == "0.25":
         sample_func = sample_stz_s_0p25
     else:
@@ -169,6 +176,8 @@ def write_simple_start(
     n_particles=5000,
     vacuum=False,
     profiles="realistic",
+    ni=n_m3_func,
+    Ti=T_keV_func,
 ):
     """
     Write a start.dat file for SIMPLE with particle initial conditions.
@@ -181,6 +190,8 @@ def write_simple_start(
             n_particles,
             vacuum,
             profiles,
+            ni=n_m3_func,
+            Ti=T_keV_func,
         )
     )
 
@@ -204,6 +215,8 @@ def compute_alpha_loss(
     tol=1e-9,
     vacuum=False,
     profiles="realistic",
+    ni=n_m3_func,
+    Ti=T_keV_func,
 ):
     """
     If maxloss is >= 1, this function returns the energy loss fraction at t_max.
@@ -221,6 +234,8 @@ def compute_alpha_loss(
             n_particles,
             vacuum,
             profiles,
+            ni=n_m3_func,
+            Ti=T_keV_func,
         )
     )
     print("tracing particles", flush=True)
